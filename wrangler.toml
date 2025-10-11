@@ -1,0 +1,6 @@
+name = "piqqi-be"
+main = "build/index.js"
+compatibility_date = "2025-10-11"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
