@@ -4,3 +4,8 @@ compatibility_date = "2025-10-11"
 
 [build]
 command = "cargo install -q worker-build && worker-build --release"
+
+[[d1_databases]]
+binding = "piqqi"
+database_name = "piqqi"
+database_id = "f0dea7b6-dcff-488e-8128-09fd6dfccc90"
