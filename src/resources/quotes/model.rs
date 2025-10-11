@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LineItem {
+    pub id: i32,
+    pub quote_id: i32,
+    pub customer_id: i32,
     pub name: String,
     pub sku: String,
     pub quantity: i32,
@@ -24,17 +27,19 @@ pub enum DiscountType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Quote {
+    pub id: i32,
+    pub customer_id: i32,
+    pub contact_id: String,
     pub sender_company: String,
     pub sender_address: String,
     pub sender_city_state_zip: String,
     pub client_company: String,
+    pub client_address: String,
+    pub client_city_state_zip: String,
+    pub client_country: String,
     pub quote_name: String,
-    pub contact_id: String,
     pub expires: i64, // timestamp or epoch
     pub currency: String,
-    pub address_line_1: String,
-    pub city: String,
-    pub country: String,
     pub payment_terms: String,
     pub delivery_terms: String,
     pub status: String,
@@ -43,4 +48,6 @@ pub struct Quote {
     pub tags: Vec<String>,
     pub version: i32,
     pub lines: Vec<LineItem>,
+    pub updated_at: i32,
+    pub created_at: i32,
 }

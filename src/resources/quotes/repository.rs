@@ -1,3 +1,4 @@
+use serde_json::to_string;
 use worker::{console_log, D1Database};
 
 use crate::{resources::quotes::model::Quote, server::error::ApiError};
@@ -15,13 +16,74 @@ impl QuoteRepo {
     }
 
     pub async fn create(&self, quote: Quote) -> Result<(), ApiError> {
-        let query = "INSERT INTO quotes () VALUES (?1, ?2, ?3)";
-        let statement = self.db.prepare(query).bind(&[])?;
-        let result = statement.run().await?;
+        // Serialize tags to JSON
+        let tags_json = to_string(&quote.tags).map_err(|_| ApiError::InternalServerError)?;
+
+        // Prepare the SQL query with all columns except id (autoincrement)
+        let query = r#"
+            INSERT INTO quotes (
+                customer_id,
+                contact_id,
+                sender_company,
+                sender_address,
+                sender_city_state_zip,
+                client_company,
+                client_address,
+                client_city_state_zip,
+                client_country,
+                quote_name,
+                expires,
+                currency,
+                payment_terms,
+                delivery_terms,
+                status,
+                notes,
+                message,
+                tags,
+                version,
+                created_at,
+                updated_at
+            ) VALUES (
+                ?1, ?2, ?3, ?4, ?5,
+                ?6, ?7, ?8, ?9, ?10,
+                ?11, ?12, ?13, ?14, ?15,
+                ?16, ?17, ?18, ?19,
+                strftime('%s','now'), strftime('%s','now')
+            )
+        "#;
+
+        let statement = self.db.prepare(query).bind(&[
+            quote.customer_id.into(),
+            quote.contact_id.into(),
+            quote.sender_company.into(),
+            quote.sender_address.into(),
+            quote.sender_city_state_zip.into(),
+            quote.client_company.into(),
+            quote.client_address.into(),
+            quote.client_city_state_zip.into(),
+            quote.client_country.into(),
+            quote.quote_name.into(),
+            quote.expires.into(),
+            quote.currency.into(),
+            quote.payment_terms.into(),
+            quote.delivery_terms.into(),
+            quote.status.into(),
+            quote.notes.into(),
+            quote.message.into(),
+            tags_json.into(),
+            quote.version.into(),
+        ])?;
+
+        let result = statement
+            .run()
+            .await
+            .map_err(|_| ApiError::InternalServerError)?;
         console_log!("result: {:?}", result.success());
-        match result.success() {
-            true => Ok(()),
-            false => Err(ApiError::InternalServerError),
+
+        if result.success() {
+            Ok(())
+        } else {
+            Err(ApiError::InternalServerError)
         }
     }
 

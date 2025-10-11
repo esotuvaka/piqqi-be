@@ -1,4 +1,4 @@
-use crate::{resources::quotes::model::Quote, server::responses::ApiError, App};
+use crate::{resources::quotes::model::Quote, server::error::ApiError, App};
 use axum::{
     extract::{Path, State},
     Json,
