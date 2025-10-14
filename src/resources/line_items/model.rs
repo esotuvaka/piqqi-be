@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LineItem {
-    pub id: i32,
-    pub customer_id: i32,
+    pub id: i64,
+    pub customer_id: i64,
     pub entity_type: EntityType,
-    pub entity_id: i32,
+    pub entity_id: i64,
     pub name: String,
     pub sku: String,
-    pub quantity: i32,
+    pub quantity: i64,
     pub unit_price: f64,
     pub unit_cost: f64,
     pub profit: f64,

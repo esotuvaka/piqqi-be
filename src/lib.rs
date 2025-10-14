@@ -1,13 +1,19 @@
 use std::sync::Arc;
 
-use axum::{routing::get, Router};
+use axum::{
+    routing::{delete, get, post, put},
+    Router,
+};
 use tower_service::Service;
 use worker::*;
 
 pub mod resources;
 pub mod server;
 
-use crate::resources::quotes::{repository::QuoteRepo, service::QuoteService};
+use crate::resources::{
+    line_items::repository::LineItemRepo,
+    quotes::{self, repository::QuoteRepo, service::QuoteService},
+};
 
 // Initialize the server with all shared state, SDKs, etc.
 // that can be passed into API handlers
@@ -17,7 +23,14 @@ struct App {
 }
 
 fn router(app: App) -> Router {
-    Router::new().route("/", get(root)).with_state(app)
+    Router::new()
+        .route("/", get(root))
+        .route("/quotes", post(quotes::api::create))
+        .route("/quotes", get(quotes::api::list))
+        .route("/quotes/:id", get(quotes::api::get))
+        .route("/quotes/:id", put(quotes::api::update))
+        .route("/quotes/:id", delete(quotes::api::delete))
+        .with_state(app)
 }
 
 pub async fn root() -> &'static str {

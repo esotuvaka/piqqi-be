@@ -20,16 +20,18 @@ impl QuoteService {
         }
     }
 
-    pub async fn create(&self, quote: Quote) -> Result<(), ApiError> {
-        self.quote_repo.create(quote).await;
-        self.line_item_repo.create(quote).await
+    pub async fn create(&self, quote: Quote) -> Result<Quote, ApiError> {
+        // TODO: implement auth checks
+        let lines = &quote.clone().lines;
+        self.line_item_repo.create_many(&lines).await;
+        self.quote_repo.create(quote).await
     }
 
-    pub async fn get(&self, quote_id: String) -> Result<Quote, ApiError> {
+    pub async fn get(&self, quote_id: i32) -> Result<Quote, ApiError> {
         self.quote_repo.get(quote_id).await
     }
 
-    pub async fn list(&self, customer_id: String) -> Result<Vec<Quote>, ApiError> {
+    pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>, ApiError> {
         self.quote_repo.list(customer_id).await
     }
 }

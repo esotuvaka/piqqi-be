@@ -15,12 +15,10 @@ impl QuoteRepo {
         QuoteRepo { db }
     }
 
-    pub async fn create(&self, quote: Quote) -> Result<(), ApiError> {
-        // Serialize tags to JSON
+    pub async fn create(&self, quote: Quote) -> Result<Quote, ApiError> {
         let tags_json =
             to_string(&quote.tags).map_err(|e| ApiError::InternalServerError(e.to_string()))?;
 
-        // Prepare the SQL query with all columns except id (autoincrement)
         let query = r#"
             INSERT INTO quotes (
                 customer_id,
@@ -50,45 +48,54 @@ impl QuoteRepo {
                 ?11, ?12, ?13, ?14, ?15,
                 ?16, ?17, ?18, ?19,
                 strftime('%s','now'), strftime('%s','now')
-            )
+            ) RETURNING id
         "#;
 
-        let statement = self.db.prepare(query).bind(&[
-            quote.customer_id.into(),
-            quote.contact_id.into(),
-            quote.sender_company.into(),
-            quote.sender_address.into(),
-            quote.sender_city_state_zip.into(),
-            quote.client_company.into(),
-            quote.client_address.into(),
-            quote.client_city_state_zip.into(),
-            quote.client_country.into(),
-            quote.quote_name.into(),
-            quote.expires.into(),
-            quote.currency.into(),
-            quote.payment_terms.into(),
-            quote.delivery_terms.into(),
-            quote.status.into(),
-            quote.notes.into(),
-            quote.message.into(),
-            tags_json.into(),
-            quote.version.into(),
-        ])?;
+        let statement = self
+            .db
+            .prepare(query)
+            .bind(&[
+                quote.customer_id.into(),
+                quote.contact_id.into(),
+                quote.sender_company.into(),
+                quote.sender_address.into(),
+                quote.sender_city_state_zip.into(),
+                quote.client_company.into(),
+                quote.client_address.into(),
+                quote.client_city_state_zip.into(),
+                quote.client_country.into(),
+                quote.quote_name.into(),
+                quote.expires.into(),
+                quote.currency.into(),
+                quote.payment_terms.into(),
+                quote.delivery_terms.into(),
+                quote.status.into(),
+                quote.notes.into(),
+                quote.message.into(),
+                tags_json.into(),
+                quote.version.into(),
+            ])
+            .expect("bind query params");
 
-        let result = statement.run().await;
+        let result = statement
+            .first::<Quote>(None)
+            .await
+            .expect("insert new quote");
 
         match result {
-            Ok(_) => Ok(()),
-            Err(e) => Err(ApiError::InternalServerError(e.to_string())),
+            Some(q) => Ok(q),
+            None => Err(ApiError::InternalServerError(
+                "inserting new quote".to_string(),
+            )),
         }
     }
 
-    pub async fn get(&self, quote_id: String) -> Result<Quote, ApiError> {
+    pub async fn get(&self, quote_id: i32) -> Result<Quote, ApiError> {
         let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.quote_id = q.id WHERE q.id = $1;".to_string();
         let statement = self
             .db
             .prepare(query)
-            .bind(&[quote_id.to_string().into()])
+            .bind(&[quote_id.into()])
             .expect("failed to bind query params");
         let maybe_quote = statement.first::<Quote>(None).await?;
         match maybe_quote {
@@ -97,12 +104,12 @@ impl QuoteRepo {
         }
     }
 
-    pub async fn list(&self, customer_id: String) -> Result<Vec<Quote>, ApiError> {
+    pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>, ApiError> {
         let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.quote_id = q.id WHERE customer_id = $1".to_string();
         let statement = self
             .db
             .prepare(query)
-            .bind(&[customer_id.to_string().into()])
+            .bind(&[customer_id.into()])
             .expect("failed to bind query params");
         let quotes = statement.all().await?.results::<Quote>()?;
         Ok(quotes)

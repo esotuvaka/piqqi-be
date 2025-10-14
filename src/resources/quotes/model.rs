@@ -4,8 +4,8 @@ use crate::resources::line_items::model::LineItem;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Quote {
-    pub id: i32,
-    pub customer_id: i32,
+    pub id: i64,
+    pub customer_id: i64,
     pub contact_id: String,
     pub sender_company: String,
     pub sender_address: String,
@@ -23,8 +23,13 @@ pub struct Quote {
     pub notes: String,
     pub message: String,
     pub tags: Vec<String>,
-    pub version: i32,
+    pub version: i64,
     pub lines: Vec<LineItem>,
-    pub updated_at: i32,
-    pub created_at: i32,
+    pub updated_at: i64,
+    pub created_at: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateResponse {
+    pub quote: Quote,
 }

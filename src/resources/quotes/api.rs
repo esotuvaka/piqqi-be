@@ -1,25 +1,50 @@
-use crate::{resources::quotes::model::Quote, server::error::ApiError, App};
+use std::sync::Arc;
+
+use crate::{
+    resources::quotes::model::{CreateResponse, Quote},
+    server::error::ApiError,
+    App,
+};
 use axum::{
+    debug_handler,
     extract::{Path, State},
     Json,
 };
 
-fn get(State(a): State<App>, Path(quote_id): Path<String>) -> Result<Json<Quote>, ApiError> {
-    // Get quote from DB using ID
-    // Shape should be a.<service>.get()
+#[debug_handler]
+pub async fn create(
+    State(a): State<Arc<App>>,
+    Json(payload): Json<Quote>,
+) -> Result<Json<CreateResponse>, ApiError> {
+    // TODO: implement tag struct validation on mutation payloads
 
-    // Return quote
+    let result = a.quote_service.create(payload).await;
+    match result {
+        Ok(quote) => Ok(Json(CreateResponse { quote })),
+        Err(e) => Err(e),
+    }
+}
+
+#[debug_handler]
+pub async fn get(
+    State(a): State<Arc<App>>,
+    Path(quote_id): Path<i32>,
+) -> Result<Json<Quote>, ApiError> {
+    let quote = a.quote_service.get(quote_id).await;
+    match quote {
+        Ok(q) => Ok(Json(q)),
+        Err(e) => Err(e),
+    }
+}
+
+pub async fn list() {
     todo!()
 }
 
-fn list() {
+pub async fn update() {
     todo!()
 }
 
-fn update() {
-    todo!()
-}
-
-fn delete() {
+pub async fn delete() {
     todo!()
 }
