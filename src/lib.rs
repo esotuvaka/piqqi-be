@@ -31,7 +31,8 @@ async fn fetch(
     _ctx: Context,
 ) -> Result<axum::http::Response<axum::body::Body>> {
     let quote_repo = QuoteRepo::new(env.d1("piqqi").unwrap());
-    let quote_service = QuoteService::new(quote_repo);
+    let line_items_repo = LineItemRepo::new(env.d1("piqqi").unwrap());
+    let quote_service = QuoteService::new(quote_repo, line_items_repo);
 
     let app = App {
         quote_service: quote_service.into(),
