@@ -17,7 +17,8 @@ impl QuoteRepo {
 
     pub async fn create(&self, quote: Quote) -> Result<(), ApiError> {
         // Serialize tags to JSON
-        let tags_json = to_string(&quote.tags).map_err(|_| ApiError::InternalServerError)?;
+        let tags_json =
+            to_string(&quote.tags).map_err(|e| ApiError::InternalServerError(e.to_string()))?;
 
         // Prepare the SQL query with all columns except id (autoincrement)
         let query = r#"
@@ -74,16 +75,11 @@ impl QuoteRepo {
             quote.version.into(),
         ])?;
 
-        let result = statement
-            .run()
-            .await
-            .map_err(|_| ApiError::InternalServerError)?;
-        console_log!("result: {:?}", result.success());
+        let result = statement.run().await;
 
-        if result.success() {
-            Ok(())
-        } else {
-            Err(ApiError::InternalServerError)
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(ApiError::InternalServerError(e.to_string())),
         }
     }
 

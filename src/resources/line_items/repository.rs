@@ -36,7 +36,7 @@ impl LineItemRepo {
         let statement = self.db.prepare(query).bind(&[
             line_item.customer_id.into(),
             serde_json::to_string(&line_item.entity_type)
-                .map_err(|_| ApiError::InternalServerError)?
+                .map_err(|e| ApiError::InternalServerError(e.to_string()))?
                 .into(),
             line_item.entity_id.into(),
             line_item.name.into(),
@@ -48,7 +48,7 @@ impl LineItemRepo {
             line_item.margin.into(),
             line_item.discount.map(Into::into).unwrap_or_default(),
             serde_json::to_string(&line_item.discount_type)
-                .map_err(|_| ApiError::InternalServerError)?
+                .map_err(|e| ApiError::InternalServerError(e.to_string()))?
                 .into(),
             line_item.tax_rate.map(Into::into).unwrap_or_default(),
             line_item.notes.unwrap_or_default().into(),
@@ -59,12 +59,12 @@ impl LineItemRepo {
         if result.success() {
             Ok(())
         } else {
-            Err(ApiError::InternalServerError)
+            Err(ApiError::InternalServerError(result.error().unwrap()))
         }
     }
 
     pub async fn create_many(&self, line_items: &[LineItem]) -> Result<(), ApiError> {
-        let statements = vec![];
+        let mut statements = vec![];
         for li in line_items {
             let statement = self
                 .db
@@ -81,8 +81,8 @@ impl LineItemRepo {
                         .unwrap_or_default()
                         .into(),
                     li.entity_id.into(),
-                    li.name.into(),
-                    li.sku.into(),
+                    li.name.clone().into(),
+                    li.sku.clone().into(),
                     li.quantity.into(),
                     li.unit_price.into(),
                     li.unit_cost.into(),
@@ -93,11 +93,15 @@ impl LineItemRepo {
                         .unwrap_or_default()
                         .into(),
                     li.tax_rate.into(),
-                    li.notes.into(),
+                    li.notes.clone().into(),
                 ])?;
             statements.push(statement)
         }
 
         let results = self.db.batch(statements).await;
+        match results {
+            Ok(_) => Ok(()),
+            Err(e) => Err(ApiError::InternalServerError(e.to_string())),
+        }
     }
 }

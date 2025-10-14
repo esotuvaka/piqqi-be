@@ -4,11 +4,11 @@ pub enum ApiError {
     TooManyRequests,
     Forbidden,
     Unauthorised,
-    InternalServerError,
+    InternalServerError(String),
 }
 
 impl From<worker::Error> for ApiError {
-    fn from(_: worker::Error) -> Self {
-        ApiError::InternalServerError
+    fn from(e: worker::Error) -> Self {
+        ApiError::InternalServerError(e.to_string())
     }
 }
