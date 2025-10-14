@@ -104,4 +104,15 @@ impl LineItemRepo {
             Err(e) => Err(ApiError::InternalServerError(e.to_string())),
         }
     }
+
+    pub async fn list(&self, customer_id: i32, entity_id: i32) -> Result<Vec<LineItem>, ApiError> {
+        let query = "SELECT * FROM line_items WHERE customer_id = $1 AND entity_id = $2".to_string();
+        let statement = self
+            .db
+            .prepare(query)
+            .bind(&[customer_id.to_string().into(), entity_id.to_string().into()])
+            .expect("failed to bind query params");
+        let line_items = statement.all().await?.results::<LineItem>()?;
+        Ok(line_items)
+    }
 }
