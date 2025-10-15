@@ -1,7 +1,7 @@
 use serde_json::to_string;
-use worker::{console_log, D1Database};
+use worker::*;
 
-use crate::{resources::quotes::model::Quote, server::error::ApiError};
+use crate::resources::quotes::model::Quote;
 
 /// Repositories _only_ perform data access. They don't care for auth or business logic,
 /// which should be handled by services
@@ -15,10 +15,7 @@ impl QuoteRepo {
         QuoteRepo { db }
     }
 
-    pub async fn create(&self, quote: Quote) -> Result<Quote, ApiError> {
-        let tags_json =
-            to_string(&quote.tags).map_err(|e| ApiError::InternalServerError(e.to_string()))?;
-
+    pub async fn create(&self, quote: Quote) -> Result<Quote> {
         let query = r#"
             INSERT INTO quotes (
                 customer_id,
@@ -48,8 +45,11 @@ impl QuoteRepo {
                 ?11, ?12, ?13, ?14, ?15,
                 ?16, ?17, ?18, ?19,
                 strftime('%s','now'), strftime('%s','now')
-            ) RETURNING id
+            ) RETURNING *;
         "#;
+
+        let tags_json = to_string(&quote.tags)
+            .map_err(|_e| Error::RustError("converting tags array to string".to_string()))?;
 
         let statement = self
             .db
@@ -77,20 +77,14 @@ impl QuoteRepo {
             ])
             .expect("bind query params");
 
-        let result = statement
+        Ok(statement
             .first::<Quote>(None)
             .await
-            .expect("insert new quote");
-
-        match result {
-            Some(q) => Ok(q),
-            None => Err(ApiError::InternalServerError(
-                "inserting new quote".to_string(),
-            )),
-        }
+            .expect("failed to insert quote")
+            .unwrap())
     }
 
-    pub async fn get(&self, quote_id: i32) -> Result<Quote, ApiError> {
+    pub async fn get(&self, quote_id: i32) -> Result<Quote> {
         let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.quote_id = q.id WHERE q.id = $1;".to_string();
         let statement = self
             .db
@@ -100,11 +94,11 @@ impl QuoteRepo {
         let maybe_quote = statement.first::<Quote>(None).await?;
         match maybe_quote {
             Some(q) => Ok(q),
-            None => Err(ApiError::NotFound),
+            None => Err(Error::RustError("quote missing".to_string())),
         }
     }
 
-    pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>, ApiError> {
+    pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>> {
         let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.quote_id = q.id WHERE customer_id = $1".to_string();
         let statement = self
             .db

@@ -1,41 +1,23 @@
-use std::sync::Arc;
+use worker::{Error, Request, Response, RouteContext};
 
-use crate::{
-    resources::quotes::model::{CreateResponse, Quote},
-    server::error::ApiError,
-    App,
-};
-use axum::{
-    debug_handler,
-    extract::{Path, State},
-    Json,
-};
+use crate::{resources::quotes::model::Quote, App};
 
-#[debug_handler]
-pub async fn create(
-    State(a): State<Arc<App>>,
-    Json(payload): Json<Quote>,
-) -> Result<Json<CreateResponse>, ApiError> {
-    // TODO: implement tag struct validation on mutation payloads
+pub async fn create(mut req: Request, ctx: RouteContext<App>) -> worker::Result<Response> {
+    // TODO: grab customer ID from token
 
-    let result = a.quote_service.create(payload).await;
-    match result {
-        Ok(quote) => Ok(Json(CreateResponse { quote })),
-        Err(e) => Err(e),
-    }
+    let payload: Quote = req.json().await.unwrap();
+
+    let quote = ctx
+        .data
+        .quote_repo
+        .create(payload)
+        .await
+        .map_err(|_e| Error::RustError("creating quote".to_string()))?;
+
+    Response::from_json(&quote)
 }
 
-#[debug_handler]
-pub async fn get(
-    State(a): State<Arc<App>>,
-    Path(quote_id): Path<i32>,
-) -> Result<Json<Quote>, ApiError> {
-    let quote = a.quote_service.get(quote_id).await;
-    match quote {
-        Ok(q) => Ok(Json(q)),
-        Err(e) => Err(e),
-    }
-}
+pub async fn get() {}
 
 pub async fn list() {
     todo!()

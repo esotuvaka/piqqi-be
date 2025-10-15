@@ -1,4 +1,3 @@
-use axum::{response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,10 +19,4 @@ impl From<worker::Error> for ApiError {
 #[derive(Debug, Serialize, Deserialize)]
 struct ApiErrorResponse {
     error: ApiError,
-}
-
-impl IntoResponse for ApiError {
-    fn into_response(self) -> axum::response::Response {
-        Json(ApiErrorResponse { error: self }).into_response()
-    }
 }

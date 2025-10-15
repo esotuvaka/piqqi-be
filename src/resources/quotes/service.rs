@@ -1,9 +1,8 @@
-use crate::{
-    resources::{
-        line_items::repository::LineItemRepo,
-        quotes::{model::Quote, repository::QuoteRepo},
-    },
-    server::error::ApiError,
+use worker::Result;
+
+use crate::resources::{
+    line_items::repository::LineItemRepo,
+    quotes::{model::Quote, repository::QuoteRepo},
 };
 
 #[derive(Debug)]
@@ -20,18 +19,18 @@ impl QuoteService {
         }
     }
 
-    pub async fn create(&self, quote: Quote) -> Result<Quote, ApiError> {
+    pub async fn create(&self, quote: Quote) -> Result<Quote> {
         // TODO: implement auth checks
         let lines = &quote.clone().lines;
         self.line_item_repo.create_many(&lines).await;
         self.quote_repo.create(quote).await
     }
 
-    pub async fn get(&self, quote_id: i32) -> Result<Quote, ApiError> {
+    pub async fn get(&self, quote_id: i32) -> Result<Quote> {
         self.quote_repo.get(quote_id).await
     }
 
-    pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>, ApiError> {
+    pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>> {
         self.quote_repo.list(customer_id).await
     }
 }
