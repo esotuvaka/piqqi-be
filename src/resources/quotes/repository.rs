@@ -1,7 +1,7 @@
 use serde_json::to_string;
 use worker::*;
 
-use crate::resources::quotes::model::Quote;
+use crate::resources::quotes::model::{CreateRequest, Quote};
 
 /// Repositories _only_ perform data access. They don't care for auth or business logic,
 /// which should be handled by services
@@ -15,7 +15,7 @@ impl QuoteRepo {
         QuoteRepo { db }
     }
 
-    pub async fn create(&self, quote: Quote) -> Result<Quote> {
+    pub async fn create(&self, quote: CreateRequest, customer_id: i64) -> Result<Quote> {
         let query = r#"
             INSERT INTO quotes (
                 customer_id,
@@ -55,7 +55,7 @@ impl QuoteRepo {
             .db
             .prepare(query)
             .bind(&[
-                quote.customer_id.into(),
+                customer_id.into(),
                 quote.contact_id.into(),
                 quote.sender_company.into(),
                 quote.sender_address.into(),

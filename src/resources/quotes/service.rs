@@ -1,8 +1,12 @@
 use worker::Result;
 
 use crate::resources::{
-    line_items::repository::LineItemRepo,
-    quotes::{model::Quote, repository::QuoteRepo},
+    line_items::{self, model::EntityType, repository::LineItemRepo},
+    quotes::{
+        self,
+        model::{CreateRequest, Quote},
+        repository::QuoteRepo,
+    },
 };
 
 #[derive(Debug)]
@@ -19,11 +23,19 @@ impl QuoteService {
         }
     }
 
-    pub async fn create(&self, quote: Quote) -> Result<Quote> {
+    pub async fn create(
+        &self,
+        payload: quotes::model::CreateRequest,
+        customer_id: i64,
+    ) -> Result<Quote> {
         // TODO: implement auth checks
-        let lines = &quote.clone().lines;
-        self.line_item_repo.create_many(&lines).await;
-        self.quote_repo.create(quote).await
+        let quote = self.quote_repo.create(payload.clone(), customer_id).await?;
+        let entity_type = EntityType::Quote;
+        let _ = self
+            .line_item_repo
+            .create_many(payload.lines, entity_type, quote.id.unwrap(), customer_id)
+            .await?;
+        Ok(quote)
     }
 
     pub async fn get(&self, quote_id: i64) -> Result<Quote> {

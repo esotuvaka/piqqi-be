@@ -34,3 +34,18 @@ pub enum EntityType {
     Fulfillment,
     Shipping,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateRequest {
+    pub name: String,
+    pub sku: String,
+    pub quantity: i64,
+    pub unit_price: f64,
+    pub unit_cost: f64,
+    pub profit: f64,
+    pub margin: f64,
+    pub discount: Option<f64>,
+    pub discount_type: DiscountType,
+    pub tax_rate: Option<f64>,
+    pub notes: Option<String>,
+}

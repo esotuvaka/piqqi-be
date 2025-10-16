@@ -1,6 +1,9 @@
-use worker::D1Database;
+use worker::{D1Database, Result};
 
-use crate::{resources::line_items::model::LineItem, server::error::ApiError};
+use crate::resources::line_items::{
+    self,
+    model::{EntityType, LineItem},
+};
 
 #[derive(Debug)]
 pub struct LineItemRepo {
@@ -12,7 +15,7 @@ impl LineItemRepo {
         LineItemRepo { db }
     }
 
-    pub async fn create(&self, line_item: LineItem) -> Result<(), ApiError> {
+    pub async fn create(&self, line_item: LineItem) -> Result<()> {
         let query = r#"
             INSERT INTO line_items (
                 customer_id,
@@ -36,7 +39,11 @@ impl LineItemRepo {
         let statement = self.db.prepare(query).bind(&[
             line_item.customer_id.into(),
             serde_json::to_string(&line_item.entity_type)
-                .map_err(|e| ApiError::InternalServerError(e.to_string()))?
+                .map_err(|e| {
+                    worker::Error::RustError(format!(
+                        "converting line item entity type to json string: {e}"
+                    ))
+                })?
                 .into(),
             line_item.entity_id.into(),
             line_item.name.into(),
@@ -48,22 +55,35 @@ impl LineItemRepo {
             line_item.margin.into(),
             line_item.discount.map(Into::into).unwrap_or_default(),
             serde_json::to_string(&line_item.discount_type)
-                .map_err(|e| ApiError::InternalServerError(e.to_string()))?
+                .map_err(|e| {
+                    worker::Error::RustError(format!(
+                        "converting line item discount type to json string: {e}"
+                    ))
+                })?
                 .into(),
             line_item.tax_rate.map(Into::into).unwrap_or_default(),
             line_item.notes.unwrap_or_default().into(),
         ])?;
 
-        let result = statement.run().await.map_err(ApiError::from)?;
+        let result = statement
+            .run()
+            .await
+            .map_err(|e| worker::Error::RustError(e.to_string()))?;
 
         if result.success() {
             Ok(())
         } else {
-            Err(ApiError::InternalServerError(result.error().unwrap()))
+            Err(worker::Error::RustError(result.error().unwrap()))
         }
     }
 
-    pub async fn create_many(&self, line_items: &[LineItem]) -> Result<(), ApiError> {
+    pub async fn create_many(
+        &self,
+        line_items: Vec<line_items::model::CreateRequest>,
+        entity_type: EntityType,
+        entity_id: i64,
+        customer_id: i64,
+    ) -> Result<()> {
         let mut statements = vec![];
         for li in line_items {
             let statement = self
@@ -76,11 +96,11 @@ impl LineItemRepo {
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"#,
                 )
                 .bind(&[
-                    li.customer_id.into(),
-                    serde_json::to_string(&li.entity_type)
+                    customer_id.into(),
+                    serde_json::to_string(&entity_type)
                         .unwrap_or_default()
                         .into(),
-                    li.entity_id.into(),
+                    entity_id.into(),
                     li.name.clone().into(),
                     li.sku.clone().into(),
                     li.quantity.into(),
@@ -101,11 +121,11 @@ impl LineItemRepo {
         let results = self.db.batch(statements).await;
         match results {
             Ok(_) => Ok(()),
-            Err(e) => Err(ApiError::InternalServerError(e.to_string())),
+            Err(e) => Err(worker::Error::RustError(e.to_string())),
         }
     }
 
-    pub async fn list(&self, customer_id: i32, entity_id: i32) -> Result<Vec<LineItem>, ApiError> {
+    pub async fn list(&self, customer_id: i32, entity_id: i32) -> Result<Vec<LineItem>> {
         let query =
             "SELECT * FROM line_items WHERE customer_id = ?1 AND entity_id = ?2".to_string();
         let statement = self
