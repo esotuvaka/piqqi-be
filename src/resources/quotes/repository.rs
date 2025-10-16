@@ -99,7 +99,7 @@ impl QuoteRepo {
     }
 
     pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>> {
-        let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.quote_id = q.id WHERE customer_id = $1".to_string();
+        let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.entity_id = q.id WHERE li.customer_id = ?1 AND li.customer_id = q.customer_id".to_string();
         let statement = self
             .db
             .prepare(query)

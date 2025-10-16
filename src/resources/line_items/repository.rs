@@ -106,7 +106,8 @@ impl LineItemRepo {
     }
 
     pub async fn list(&self, customer_id: i32, entity_id: i32) -> Result<Vec<LineItem>, ApiError> {
-        let query = "SELECT * FROM line_items WHERE customer_id = $1 AND entity_id = $2".to_string();
+        let query =
+            "SELECT * FROM line_items WHERE customer_id = ?1 AND entity_id = ?2".to_string();
         let statement = self
             .db
             .prepare(query)

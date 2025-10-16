@@ -19,7 +19,7 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     Router::with_data(App { quote_repo })
         .post_async("/quotes", quotes::api::create)
-        // .get_async("/quotes", quotes::api::list)
+        .get_async("/quotes", quotes::api::list)
         // .get_async("/quotes/:id", quotes::api::get)
         // .put_async("/quotes/:id", quotes::api::update)
         // .delete_async("/quotes/:id", quotes::api::delete)

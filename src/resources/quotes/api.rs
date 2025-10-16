@@ -50,26 +50,7 @@ pub async fn list(_req: Request, ctx: RouteContext<App>) -> worker::Result<Respo
         .quote_repo
         .list(customer_id)
         .await
-        .map_err(|_e| Error::RustError("listing quotes".to_string()))?;
+        .map_err(|e| Error::RustError(format!("listing quotes: {}", e).to_string()))?;
 
     Response::from_json(&quotes)
-}
-
-// pub async fn update(mut req: Request, ctx: RouteContext<App>) -> worker::Result<Response> {
-//     // TODO: get customer_id
-//
-//     let payload: Quote = req.json().await.unwrap();
-//
-//     let quote = ctx
-//         .data
-//         .quote_repo
-//         .update(payload)
-//         .await
-//         .map_err(|_e| Error::RustError("creating quote".to_string()))?;
-//
-//     Response::from_json(&quote)
-// }
-
-pub async fn delete() {
-    todo!()
 }
