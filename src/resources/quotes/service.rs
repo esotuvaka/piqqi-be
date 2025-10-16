@@ -26,7 +26,7 @@ impl QuoteService {
         self.quote_repo.create(quote).await
     }
 
-    pub async fn get(&self, quote_id: i32) -> Result<Quote> {
+    pub async fn get(&self, quote_id: i64) -> Result<Quote> {
         self.quote_repo.get(quote_id).await
     }
 

@@ -84,7 +84,7 @@ impl QuoteRepo {
             .unwrap())
     }
 
-    pub async fn get(&self, quote_id: i32) -> Result<Quote> {
+    pub async fn get(&self, quote_id: i64) -> Result<Quote> {
         let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.quote_id = q.id WHERE q.id = $1;".to_string();
         let statement = self
             .db
