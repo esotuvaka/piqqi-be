@@ -1,3 +1,4 @@
+use validator::Validate;
 use worker::{Error, Request, Response, RouteContext};
 
 use crate::{
@@ -7,9 +8,16 @@ use crate::{
 
 pub async fn create(mut req: Request, ctx: RouteContext<App>) -> worker::Result<Response> {
     // TODO: grab customer ID from token
-
-    let payload: quotes::model::CreateRequest = req.json().await.unwrap();
     let customer_id: i64 = 1;
+
+    let payload: quotes::model::CreateRequest = match req.json().await {
+        Ok(p) => p,
+        Err(_) => return Response::error("invalid payload; ensure all fields are populated", 400),
+    };
+    match payload.validate() {
+        Ok(_) => (),
+        Err(e) => return Response::error(format!("invalid payload {e}"), 400),
+    }
 
     let quote = ctx
         .data
