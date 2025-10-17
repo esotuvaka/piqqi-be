@@ -10,6 +10,7 @@ pub async fn create(mut req: Request, ctx: RouteContext<App>) -> worker::Result<
     // TODO: grab customer ID from token
     let customer_id: i64 = 1;
 
+    // TODO: make the error response structured so we can display in toast notifs
     let payload: quotes::model::CreateRequest = match req.json().await {
         Ok(p) => p,
         Err(_) => return Response::error("invalid payload; ensure all fields are populated", 400),

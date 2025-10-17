@@ -12,8 +12,7 @@ pub struct App {
     quote_service: QuoteService,
 }
 
-fn cors_response(req: Request) -> Result<Response> {
-    let mut res = Response::empty()?;
+fn with_cors(req: &Request, mut res: Response) -> Result<Response> {
     let headers = res.headers_mut();
     if let Some(origin) = req.headers().get("Origin")? {
         headers.set("Access-Control-Allow-Origin", &origin)?;
@@ -42,15 +41,15 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let quote_service = QuoteService::new(quote_repo, line_item_repo);
 
     if req.method() == Method::Options {
-        return cors_response(req);
+        let res = Response::empty()?;
+        return with_cors(&req, res);
     }
 
-    Router::with_data(App { quote_service })
+    let router = Router::with_data(App { quote_service })
         .post_async("/quotes", quotes::api::create)
-        .get_async("/quotes", quotes::api::list)
-        // .get_async("/quotes/:id", quotes::api::get)
-        // .put_async("/quotes/:id", quotes::api::update)
-        // .delete_async("/quotes/:id", quotes::api::delete)
-        .run(req, env)
-        .await
+        .get_async("/quotes", quotes::api::list);
+
+    let res = router.run(req.clone()?, env).await?;
+
+    with_cors(&req, res)
 }
