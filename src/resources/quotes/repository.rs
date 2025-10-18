@@ -22,6 +22,8 @@ impl QuoteRepo {
         QuoteRepo { db }
     }
 
+    // TODO: move this all to use Mongo DB instead. Documents should be stored in document
+    // databases. It is not worth the effort to shoehorn impl into sqlite
     pub async fn create(
         &self,
         quote: CreateRequest,
