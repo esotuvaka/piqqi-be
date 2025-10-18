@@ -12,26 +12,24 @@ pub struct App {
     quote_service: QuoteService,
 }
 
-fn with_cors(req: &Request, mut res: Response) -> Result<Response> {
-    let headers = res.headers_mut();
-    if let Some(origin) = req.headers().get("Origin")? {
-        headers.set("Access-Control-Allow-Origin", &origin)?;
-    } else {
-        headers.set("Access-Control-Allow-Origin", "*")?;
-    }
+const ALLOWED_ORIGINS: [&str; 1] = ["http://localhost:3000"];
+const ALLOWED_METHODS: [Method; 6] = [
+    Method::Get,
+    Method::Post,
+    Method::Put,
+    Method::Patch,
+    Method::Delete,
+    Method::Delete,
+];
 
-    headers.set("Vary", "Origin")?;
-    headers.set("Access-Control-Allow-Credentials", "true")?;
-    headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    )?;
-    headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization",
-    )?;
-    headers.set("Access-Control-Max-Age", "86400")?;
-    Ok(res)
+// TODO: make this constant!
+fn cors() -> Cors {
+    Cors::new()
+        .with_max_age(86400)
+        .with_origins(ALLOWED_ORIGINS)
+        .with_methods(ALLOWED_METHODS)
+        .with_allowed_headers(vec!["Content-Type", "Authorization"])
+        .with_credentials(true)
 }
 
 #[event(fetch)]
@@ -41,15 +39,13 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let quote_service = QuoteService::new(quote_repo, line_item_repo);
 
     if req.method() == Method::Options {
-        let res = Response::empty()?;
-        return with_cors(&req, res);
+        return Response::empty()?.with_cors(&cors());
     }
 
-    let router = Router::with_data(App { quote_service })
+    Router::with_data(App { quote_service })
         .post_async("/quotes", quotes::api::create)
-        .get_async("/quotes", quotes::api::list);
-
-    let res = router.run(req.clone()?, env).await?;
-
-    with_cors(&req, res)
+        .get_async("/quotes", quotes::api::list)
+        .run(req.clone()?, env)
+        .await?
+        .with_cors(&cors())
 }

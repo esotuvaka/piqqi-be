@@ -15,7 +15,7 @@ impl QuoteRepo {
         QuoteRepo { db }
     }
 
-    pub async fn create(&self, quote: CreateRequest, customer_id: i64) -> Result<Quote> {
+    pub async fn create(&self, quote: CreateRequest, customer_id: String) -> Result<Quote> {
         let query = r#"
             INSERT INTO quotes (
                 customer_id,

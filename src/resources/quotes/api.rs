@@ -2,22 +2,31 @@ use validator::Validate;
 use worker::{Error, Request, Response, RouteContext};
 
 use crate::{
-    resources::quotes::{self, model::Quote},
+    cors,
+    resources::quotes::{
+        self,
+        model::{InvalidPayloadResponse, Quote},
+    },
     App,
 };
 
 pub async fn create(mut req: Request, ctx: RouteContext<App>) -> worker::Result<Response> {
     // TODO: grab customer ID from token
-    let customer_id: i64 = 1;
+    let customer_id: String = "cus_39djwi10fhe2".to_string();
 
-    // TODO: make the error response structured so we can display in toast notifs
     let payload: quotes::model::CreateRequest = match req.json().await {
         Ok(p) => p,
         Err(_) => return Response::error("invalid payload; ensure all fields are populated", 400),
     };
     match payload.validate() {
         Ok(_) => (),
-        Err(e) => return Response::error(format!("invalid payload {e}"), 400),
+        Err(e) => {
+            let resp = InvalidPayloadResponse {
+                message: "invalid payload".to_string(),
+                errors: e,
+            };
+            return Ok(Response::from_json(&resp)?.with_status(422));
+        }
     }
 
     let quote = ctx
@@ -27,7 +36,7 @@ pub async fn create(mut req: Request, ctx: RouteContext<App>) -> worker::Result<
         .await
         .map_err(|e| Error::RustError(format!("creating quote: {e}").to_string()))?;
 
-    Response::from_json(&quote)
+    Response::from_json(&quote)?.with_cors(&cors())
 }
 
 pub async fn get(_req: Request, ctx: RouteContext<App>) -> worker::Result<Response> {

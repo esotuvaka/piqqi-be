@@ -1,4 +1,4 @@
--- Migration number: 0001 	 2025-10-18T01:42:35.654Z
+-- Migration number: 0002 	 2025-10-18T01:51:03.968Z
 -- Purpose: Create quotes + polymorphic line_items tables with TEXT IDs
 -- Timestamp: 2025-10-17T00:00:00Z
 

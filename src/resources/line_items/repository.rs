@@ -81,8 +81,8 @@ impl LineItemRepo {
         &self,
         line_items: Vec<line_items::model::CreateRequest>,
         entity_type: EntityType,
-        entity_id: i64,
-        customer_id: i64,
+        entity_id: String,
+        customer_id: String,
     ) -> Result<()> {
         let mut statements = vec![];
         for li in line_items {
@@ -96,11 +96,11 @@ impl LineItemRepo {
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"#,
                 )
                 .bind(&[
-                    customer_id.into(),
+                    customer_id.clone().into(),
                     serde_json::to_string(&entity_type)
                         .unwrap_or_default()
                         .into(),
-                    entity_id.into(),
+                    entity_id.clone().into(),
                     li.name.clone().into(),
                     li.sku.clone().into(),
                     li.quantity.into(),

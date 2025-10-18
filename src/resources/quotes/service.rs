@@ -26,14 +26,17 @@ impl QuoteService {
     pub async fn create(
         &self,
         payload: quotes::model::CreateRequest,
-        customer_id: i64,
+        customer_id: String,
     ) -> Result<Quote> {
         // TODO: implement auth checks
-        let quote = self.quote_repo.create(payload.clone(), customer_id).await?;
+        let quote = self
+            .quote_repo
+            .create(payload.clone(), customer_id.clone())
+            .await?;
         let entity_type = EntityType::Quote;
         let _ = self
             .line_item_repo
-            .create_many(payload.lines, entity_type, quote.id.unwrap(), customer_id)
+            .create_many(payload.lines, entity_type, quote.clone().id, customer_id)
             .await?;
         Ok(quote)
     }
