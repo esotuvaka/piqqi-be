@@ -5,7 +5,7 @@ use crate::{
     cors,
     resources::quotes::{
         self,
-        model::{InvalidPayloadResponse, Quote},
+        model::{IncompletePayloadResponse, InvalidPayloadResponse, Quote},
     },
     App,
 };
@@ -16,7 +16,13 @@ pub async fn create(mut req: Request, ctx: RouteContext<App>) -> worker::Result<
 
     let payload: quotes::model::CreateRequest = match req.json().await {
         Ok(p) => p,
-        Err(_) => return Response::error("invalid payload; ensure all fields are populated", 400),
+        Err(e) => {
+            let resp = IncompletePayloadResponse {
+                message: "missing field".to_string(),
+                error: e.to_string(),
+            };
+            return Ok(Response::from_json(&resp)?.with_status(400));
+        }
     };
     match payload.validate() {
         Ok(_) => (),

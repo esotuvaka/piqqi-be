@@ -16,7 +16,7 @@ pub struct Quote {
     pub client_city_state_zip: String,
     pub client_country: String,
     pub quote_name: String,
-    pub expires: i64, // timestamp or epoch
+    pub expires: String, // timestamp or epoch
     pub currency: String,
     pub payment_terms: String,
     pub delivery_terms: String,
@@ -24,10 +24,10 @@ pub struct Quote {
     pub notes: String,
     pub message: String,
     pub tags: Vec<String>,
-    pub version: i64,
+    pub version: i32,
     pub lines: Vec<LineItem>,
-    pub updated_at: i64,
-    pub created_at: i64,
+    pub updated_at: String,
+    pub created_at: String,
 }
 
 #[derive(Debug, Clone, Validate, Serialize, Deserialize)]
@@ -50,7 +50,7 @@ pub struct CreateRequest {
     pub client_country: String,
     #[validate(length(min = 3, message = "must have at least 3 letters"))]
     pub quote_name: String,
-    pub expires: i64, // timestamp or epoch
+    pub expires: String, // Zulu/UTC time string
     #[validate(length(min = 3, max = 3, message = "must be a 3 letter country code"))]
     pub currency: String,
     #[validate(length(min = 3, message = "must have at least 3 letters"))]
@@ -62,7 +62,7 @@ pub struct CreateRequest {
     pub notes: String,
     pub message: String,
     pub tags: Vec<String>,
-    pub version: i64,
+    pub version: i32,
     #[validate(length(min = 1))]
     pub lines: Vec<line_items::model::CreateRequest>,
 }
@@ -76,4 +76,10 @@ pub struct CreateResponse {
 pub struct InvalidPayloadResponse {
     pub message: String,
     pub errors: validator::ValidationErrors,
+}
+
+#[derive(Debug, Serialize)]
+pub struct IncompletePayloadResponse {
+    pub message: String,
+    pub error: String,
 }
