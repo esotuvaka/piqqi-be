@@ -1,3 +1,4 @@
+use rand::{distr::Alphanumeric, Rng};
 use validator::Validate;
 use worker::{Error, Request, Response, RouteContext};
 
@@ -5,10 +6,19 @@ use crate::{
     cors,
     resources::quotes::{
         self,
-        model::{IncompletePayloadResponse, InvalidPayloadResponse, Quote},
+        model::{CreateResponse, IncompletePayloadResponse, InvalidPayloadResponse, Quote},
     },
     App,
 };
+
+fn generate_id(prefix: &str) -> String {
+    let rand_string: String = rand::rng()
+        .sample_iter(&Alphanumeric)
+        .take(10)
+        .map(char::from)
+        .collect();
+    format!("{}{}", prefix, rand_string)
+}
 
 pub async fn create(mut req: Request, ctx: RouteContext<App>) -> worker::Result<Response> {
     // TODO: grab customer ID from token
@@ -35,32 +45,30 @@ pub async fn create(mut req: Request, ctx: RouteContext<App>) -> worker::Result<
         }
     }
 
-    let quote = ctx
-        .data
+    let quote_id = generate_id("quo_");
+
+    ctx.data
         .quote_service
-        .create(payload, customer_id)
+        .create(payload, customer_id, quote_id.clone())
         .await
         .map_err(|e| Error::RustError(format!("creating quote: {e}").to_string()))?;
 
-    Response::from_json(&quote)?.with_cors(&cors())
+    Response::from_json(&CreateResponse { id: quote_id })?.with_cors(&cors())
 }
 
 pub async fn get(_req: Request, ctx: RouteContext<App>) -> worker::Result<Response> {
     // TODO: grab customer ID from token
+    let customer_id: String = "cus_39djwi10fhe2".to_string();
 
-    let maybe_quote_id = match ctx.param("quote_id") {
+    let quote_id = match ctx.param("quote_id") {
         Some(q) => q,
         None => return Response::error("missing quote_id", 400),
-    };
-    let quote_id = match maybe_quote_id.parse::<i64>() {
-        Ok(q) => q,
-        Err(_) => return Response::error("invalid quote_id", 400),
     };
 
     let quote: Quote = ctx
         .data
         .quote_service
-        .get(quote_id)
+        .get(quote_id.to_string())
         .await
         .map_err(|e| Error::RustError(format!("retrieving quote: {e}").to_string()))?;
 
@@ -71,7 +79,7 @@ pub async fn list(_req: Request, ctx: RouteContext<App>) -> worker::Result<Respo
     // TODO: grab customer ID from token
     // TODO: support pagination and query params for filtering
 
-    let customer_id = 1;
+    let customer_id: String = "cus_39djwi10fhe2".to_string();
 
     let quotes: Vec<Quote> = ctx
         .data

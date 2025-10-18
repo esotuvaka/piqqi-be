@@ -27,25 +27,24 @@ impl QuoteService {
         &self,
         payload: quotes::model::CreateRequest,
         customer_id: String,
-    ) -> Result<Quote> {
+        quote_id: String,
+    ) -> Result<()> {
         // TODO: implement auth checks
-        let quote = self
-            .quote_repo
-            .create(payload.clone(), customer_id.clone())
-            .await?;
         let entity_type = EntityType::Quote;
-        let _ = self
-            .line_item_repo
-            .create_many(payload.lines, entity_type, quote.clone().id, customer_id)
+        self.quote_repo
+            .create(payload.clone(), customer_id.clone(), quote_id.clone())
             .await?;
-        Ok(quote)
+        self.line_item_repo
+            .create_many(payload.lines, entity_type, quote_id.clone(), customer_id)
+            .await?;
+        Ok(())
     }
 
-    pub async fn get(&self, quote_id: i64) -> Result<Quote> {
+    pub async fn get(&self, quote_id: String) -> Result<Quote> {
         self.quote_repo.get(quote_id).await
     }
 
-    pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>> {
+    pub async fn list(&self, customer_id: String) -> Result<Vec<Quote>> {
         self.quote_repo.list(customer_id).await
     }
 }

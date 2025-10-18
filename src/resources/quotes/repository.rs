@@ -10,14 +10,27 @@ pub struct QuoteRepo {
     db: D1Database,
 }
 
+fn print_type_of<T>(_: &T) {
+    console_log!("{}", std::any::type_name::<T>());
+}
+
 impl QuoteRepo {
     pub fn new(db: D1Database) -> Self {
         QuoteRepo { db }
     }
 
-    pub async fn create(&self, quote: CreateRequest, customer_id: String) -> Result<Quote> {
+    pub async fn create(
+        &self,
+        quote: CreateRequest,
+        customer_id: String,
+        quote_id: String,
+    ) -> Result<()> {
+        console_log!("quote: {:?}", quote);
+        console_log!("customer_id: {customer_id}");
+
         let query = r#"
             INSERT INTO quotes (
+                id,
                 customer_id,
                 contact_id,
                 sender_company,
@@ -36,25 +49,25 @@ impl QuoteRepo {
                 notes,
                 message,
                 tags,
-                version,
-                created_at,
-                updated_at
+                version
             ) VALUES (
                 ?1, ?2, ?3, ?4, ?5,
                 ?6, ?7, ?8, ?9, ?10,
                 ?11, ?12, ?13, ?14, ?15,
-                ?16, ?17, ?18, ?19,
-                strftime('%s','now'), strftime('%s','now')
-            ) RETURNING *;
+                ?16, ?17, ?18, ?19, ?20
+            );
         "#;
 
         let tags_json = to_string(&quote.tags)
             .map_err(|_e| Error::RustError("converting tags array to string".to_string()))?;
+        print_type_of(&tags_json);
+        console_log!("tags_json: {tags_json}");
 
         let statement = self
             .db
             .prepare(query)
             .bind(&[
+                quote_id.into(),
                 customer_id.into(),
                 quote.contact_id.into(),
                 quote.sender_company.into(),
@@ -77,14 +90,16 @@ impl QuoteRepo {
             ])
             .expect("bind query params");
 
-        Ok(statement
-            .first::<Quote>(None)
-            .await
-            .expect("failed to insert quote")
-            .unwrap())
+        let result = statement.run().await?;
+        match result.success() {
+            true => Ok(()),
+            false => Err(worker::Error::RustError(
+                result.error().expect("error to have occurred"),
+            )),
+        }
     }
 
-    pub async fn get(&self, quote_id: i64) -> Result<Quote> {
+    pub async fn get(&self, quote_id: String) -> Result<Quote> {
         let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.quote_id = q.id WHERE q.id = $1;".to_string();
         let statement = self
             .db
@@ -98,7 +113,7 @@ impl QuoteRepo {
         }
     }
 
-    pub async fn list(&self, customer_id: i32) -> Result<Vec<Quote>> {
+    pub async fn list(&self, customer_id: String) -> Result<Vec<Quote>> {
         let query = "SELECT q.*, li.* FROM quotes q LEFT JOIN line_items li ON li.entity_id = q.id WHERE li.customer_id = ?1 AND li.customer_id = q.customer_id".to_string();
         let statement = self
             .db

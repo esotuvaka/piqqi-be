@@ -69,7 +69,7 @@ pub struct CreateRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateResponse {
-    pub quote: Quote,
+    pub id: String,
 }
 
 #[derive(Debug, Serialize)]

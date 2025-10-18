@@ -1,8 +1,8 @@
-use worker::{D1Database, Result};
+use worker::{console_log, D1Database, Result};
 
 use crate::resources::line_items::{
     self,
-    model::{EntityType, LineItem},
+    model::{DiscountType, EntityType, LineItem},
 };
 
 #[derive(Debug)]
@@ -15,68 +15,6 @@ impl LineItemRepo {
         LineItemRepo { db }
     }
 
-    pub async fn create(&self, line_item: LineItem) -> Result<()> {
-        let query = r#"
-            INSERT INTO line_items (
-                customer_id,
-                entity_type,
-                entity_id,
-                name,
-                sku,
-                quantity,
-                unit_price,
-                unit_cost,
-                profit,
-                margin,
-                discount,
-                discount_type,
-                tax_rate,
-                notes
-            )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
-        "#;
-
-        let statement = self.db.prepare(query).bind(&[
-            line_item.customer_id.into(),
-            serde_json::to_string(&line_item.entity_type)
-                .map_err(|e| {
-                    worker::Error::RustError(format!(
-                        "converting line item entity type to json string: {e}"
-                    ))
-                })?
-                .into(),
-            line_item.entity_id.into(),
-            line_item.name.into(),
-            line_item.sku.into(),
-            line_item.quantity.into(),
-            line_item.unit_price.into(),
-            line_item.unit_cost.into(),
-            line_item.profit.into(),
-            line_item.margin.into(),
-            line_item.discount.map(Into::into).unwrap_or_default(),
-            serde_json::to_string(&line_item.discount_type)
-                .map_err(|e| {
-                    worker::Error::RustError(format!(
-                        "converting line item discount type to json string: {e}"
-                    ))
-                })?
-                .into(),
-            line_item.tax_rate.map(Into::into).unwrap_or_default(),
-            line_item.notes.unwrap_or_default().into(),
-        ])?;
-
-        let result = statement
-            .run()
-            .await
-            .map_err(|e| worker::Error::RustError(e.to_string()))?;
-
-        if result.success() {
-            Ok(())
-        } else {
-            Err(worker::Error::RustError(result.error().unwrap()))
-        }
-    }
-
     pub async fn create_many(
         &self,
         line_items: Vec<line_items::model::CreateRequest>,
@@ -86,33 +24,37 @@ impl LineItemRepo {
     ) -> Result<()> {
         let mut statements = vec![];
         for li in line_items {
+            let entity_type = match entity_type {
+                EntityType::Quote => "quote",
+                EntityType::SalesOrder => "salesorder",
+                EntityType::Fulfillment => "fulfillment",
+                EntityType::Shipping => "shipping",
+            };
+            let discount_type = match li.discount_type {
+                DiscountType::Percent => "percent",
+                DiscountType::Value => "value",
+            };
+
             let statement = self
                 .db
                 .prepare(
                     r#"INSERT INTO line_items (
                     customer_id, entity_type, entity_id, name, sku, quantity,
-                    unit_price, unit_cost, profit, margin, discount, discount_type, tax_rate, notes
+                    unit_price, unit_cost, discount, discount_type, notes
                 )
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"#,
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"#,
                 )
                 .bind(&[
                     customer_id.clone().into(),
-                    serde_json::to_string(&entity_type)
-                        .unwrap_or_default()
-                        .into(),
+                    entity_type.into(),
                     entity_id.clone().into(),
                     li.name.clone().into(),
                     li.sku.clone().into(),
                     li.quantity.into(),
                     li.unit_price.into(),
                     li.unit_cost.into(),
-                    li.profit.into(),
-                    li.margin.into(),
                     li.discount.into(),
-                    serde_json::to_string(&li.discount_type)
-                        .unwrap_or_default()
-                        .into(),
-                    li.tax_rate.into(),
+                    discount_type.into(),
                     li.notes.clone().into(),
                 ])?;
             statements.push(statement)
